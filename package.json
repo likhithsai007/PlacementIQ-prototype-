@@ -1,0 +1,25 @@
+{
+  "name": "placementiq-prototype-",
+  "version": "1.0.0",
+  "description": "An AI-powered Placement Preparation and Candidate Readiness Analytics Platform. **PlacementIQ** analyzes a candidate's GitHub repositories, LeetCode profile, and resume using advanced AI models to calculate placement readiness scores, provide detailed gap analyses, recommend jobs, and generate personalized learning roadmaps.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run dev --prefix backend\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/likhithsai007/PlacementIQ-prototype-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/likhithsai007/PlacementIQ-prototype-/issues"
+  },
+  "homepage": "https://github.com/likhithsai007/PlacementIQ-prototype-#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.4"
+  }
+}
