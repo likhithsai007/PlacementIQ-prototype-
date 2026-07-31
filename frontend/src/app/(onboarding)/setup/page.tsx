@@ -29,8 +29,14 @@ const TARGET_ROLES = [
   'Frontend Developer',
   'Backend Developer',
   'Full Stack Developer',
-  'Data Scientist',
-  'Product Manager',
+  'Data Analyst',
+  'AI Engineer',
+  'ML Engineer',
+  'DevOps Engineer',
+  'QA Engineer',
+  'Cybersecurity Analyst',
+  'Cloud Engineer',
+  'Product Engineer',
 ];
 
 export default function SetupPage() {
@@ -66,14 +72,20 @@ export default function SetupPage() {
       setIsSubmitting(true);
       setError('');
       
-      const roleMap: Record<string, string> = {
-        'Software Engineer': 'SOFTWARE_ENGINEER',
-        'Frontend Developer': 'FRONTEND_DEVELOPER',
-        'Backend Developer': 'BACKEND_DEVELOPER',
-        'Full Stack Developer': 'FULLSTACK_DEVELOPER',
-        'Data Scientist': 'DATA_ANALYST',
-        'Product Manager': 'PRODUCT_ENGINEER',
-      };
+  const roleMap: Record<string, string> = {
+    'Software Engineer': 'SOFTWARE_ENGINEER',
+    'Frontend Developer': 'FRONTEND_DEVELOPER',
+    'Backend Developer': 'BACKEND_DEVELOPER',
+    'Full Stack Developer': 'FULLSTACK_DEVELOPER',
+    'Data Analyst': 'DATA_ANALYST',
+    'AI Engineer': 'AI_ENGINEER',
+    'ML Engineer': 'ML_ENGINEER',
+    'DevOps Engineer': 'DEVOPS_ENGINEER',
+    'QA Engineer': 'QA_ENGINEER',
+    'Cybersecurity Analyst': 'CYBERSECURITY_ANALYST',
+    'Cloud Engineer': 'CLOUD_ENGINEER',
+    'Product Engineer': 'PRODUCT_ENGINEER',
+  };
 
       // The backend expects specific fields. 
       // The api `/profile` takes updates.
