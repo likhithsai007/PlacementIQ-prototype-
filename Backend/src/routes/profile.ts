@@ -10,8 +10,36 @@ import { AppError } from '../core/AppError';
 import { asyncHandler } from '../core/asyncHandler';
 import { uploadFile, deleteFile } from '../lib/cloudinary';
 import type { ApiResponse } from '../types';
+import { logger } from '../utils/logger';
 
 const router = Router();
+
+class CompletenessQueue {
+  private running = new Set<string>();
+  private pending = new Set<string>();
+
+  enqueue(userId: string) {
+    if (this.running.has(userId)) {
+      this.pending.add(userId);
+      return;
+    }
+
+    this.running.add(userId);
+    recalculateUserCompleteness(userId)
+      .catch((err) => {
+        logger.error(`Error recalculating user completeness for user ${userId}:`, err);
+      })
+      .finally(() => {
+        this.running.delete(userId);
+        if (this.pending.has(userId)) {
+          this.pending.delete(userId);
+          setImmediate(() => this.enqueue(userId));
+        }
+      });
+  }
+}
+
+export const completenessQueue = new CompletenessQueue();
 
 // Multer config for certificate uploads
 const upload = multer({
@@ -31,14 +59,51 @@ const upload = multer({
 export const recalculateUserCompleteness = async (userId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      profile: true,
-      skills: true,
-      projects: true,
-      certificates: true,
-      resume: true,
-      githubProfile: true,
-      codingProfiles: true,
+    select: {
+      profile: {
+        select: {
+          id: true,
+          fullName: true,
+          phoneNumber: true,
+          location: true,
+          bio: true,
+          college: true,
+          branch: true,
+          cgpa: true,
+          graduationYear: true,
+          targetRole: true,
+        }
+      },
+      skills: {
+        select: {
+          id: true,
+        }
+      },
+      projects: {
+        select: {
+          id: true,
+        }
+      },
+      certificates: {
+        select: {
+          id: true,
+        }
+      },
+      resume: {
+        select: {
+          status: true,
+        }
+      },
+      githubProfile: {
+        select: {
+          status: true,
+        }
+      },
+      codingProfiles: {
+        select: {
+          id: true,
+        }
+      }
     }
   });
 
@@ -217,7 +282,7 @@ router.put('/', authenticate, asyncHandler(async (req: AuthRequest, res: Respons
     }
   });
 
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
 
   res.json({ success: true, data: updated } as ApiResponse);
 }));
@@ -255,7 +320,7 @@ router.put('/personal', authenticate, asyncHandler(async (req: AuthRequest, res:
     create: { userId: req.user!.id, ...parsedData, college: '', branch: '', graduationYear: 0, cgpa: 0, targetRole: 'SOFTWARE_ENGINEER' }
   });
 
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
 
   res.json({ success: true, data: updated } as ApiResponse);
 }));
@@ -279,7 +344,7 @@ router.put('/academic', authenticate, asyncHandler(async (req: AuthRequest, res:
     create: { userId: req.user!.id, ...data, fullName: '', targetRole: 'SOFTWARE_ENGINEER' }
   });
 
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
 
   res.json({ success: true, data: updated } as ApiResponse);
 }));
@@ -306,7 +371,7 @@ router.put('/career', authenticate, asyncHandler(async (req: AuthRequest, res: R
     create: { userId: req.user!.id, ...data, fullName: '', college: '', branch: '', graduationYear: 0, cgpa: 0 }
   });
 
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
 
   res.json({ success: true, data: updated } as ApiResponse);
 }));
@@ -343,7 +408,7 @@ router.post('/skills', authenticate, asyncHandler(async (req: AuthRequest, res: 
   const skill = await prisma.userSkill.create({
     data: { userId: req.user!.id, ...data }
   });
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
   res.json({ success: true, data: skill } as ApiResponse);
 }));
 
@@ -359,7 +424,7 @@ router.put('/skills/:id', authenticate, asyncHandler(async (req: AuthRequest, re
     where: { id: req.params.id, userId: req.user!.id },
     data
   });
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
   res.json({ success: true, data: skill } as ApiResponse);
 }));
 
@@ -367,7 +432,7 @@ router.delete('/skills/:id', authenticate, asyncHandler(async (req: AuthRequest,
   await prisma.userSkill.delete({
     where: { id: req.params.id, userId: req.user!.id }
   });
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
   res.json({ success: true, data: { message: 'Deleted' } } as ApiResponse);
 }));
 
@@ -394,7 +459,7 @@ router.post('/projects', authenticate, asyncHandler(async (req: AuthRequest, res
       endDate: data.endDate ? new Date(data.endDate) : null,
     }
   });
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
   res.json({ success: true, data: project } as ApiResponse);
 }));
 
@@ -418,7 +483,7 @@ router.put('/projects/:id', authenticate, asyncHandler(async (req: AuthRequest, 
       endDate: data.endDate ? new Date(data.endDate) : undefined,
     }
   });
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
   res.json({ success: true, data: project } as ApiResponse);
 }));
 
@@ -426,7 +491,7 @@ router.delete('/projects/:id', authenticate, asyncHandler(async (req: AuthReques
   await prisma.userProject.delete({
     where: { id: req.params.id, userId: req.user!.id }
   });
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
   res.json({ success: true, data: { message: 'Deleted' } } as ApiResponse);
 }));
 
@@ -449,7 +514,7 @@ router.post('/certificates', authenticate, asyncHandler(async (req: AuthRequest,
       issueDate: data.issueDate ? new Date(data.issueDate) : null,
     }
   });
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
   res.json({ success: true, data: cert } as ApiResponse);
 }));
 
@@ -499,7 +564,7 @@ router.put('/certificates/:id', authenticate, asyncHandler(async (req: AuthReque
       issueDate: data.issueDate ? new Date(data.issueDate) : undefined,
     }
   });
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
   res.json({ success: true, data: cert } as ApiResponse);
 }));
 
@@ -507,7 +572,7 @@ router.delete('/certificates/:id', authenticate, asyncHandler(async (req: AuthRe
   await prisma.userCertificate.delete({
     where: { id: req.params.id, userId: req.user!.id }
   });
-  await recalculateUserCompleteness(req.user!.id);
+  completenessQueue.enqueue(req.user!.id);
   res.json({ success: true, data: { message: 'Deleted' } } as ApiResponse);
 }));
 
